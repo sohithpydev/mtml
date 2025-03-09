@@ -66,6 +66,67 @@ def get_peak_features(data, peak_mz):
 
     return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
 
+def visualize_real_tolerance(df):
+    # Create figure
+    fig, axs = plt.subplots(1, 2, figsize=(16, 6))
+
+    # Process and plot both samples
+    for idx, peak_type in enumerate(['Sharp Peak', 'Broad Peak']):
+        # Find dominant peak near center
+        main_peak = df.loc[df['Corrected'].idxmax(), 'm/z']
+        tol = dynamic_tolerance(df, main_peak)
+
+        # Full spectrum plot
+        axs[idx].plot(df['m/z'], df['Corrected'], 'k-', label='Full Spectrum')
+        axs[idx].axvspan(main_peak - tol, main_peak + tol,
+                        color='orange', alpha=0.3,
+                        label=f'Tolerance: ±{tol:.1f}')
+
+        # Peak region analysis
+        peak_df = df[(df['m/z'] > main_peak - tol) &
+                   (df['m/z'] < main_peak + tol)].copy()
+        x = peak_df['m/z'].values
+        y = peak_df['Corrected'].values
+
+        # Gaussian fit
+        try:
+            y_smooth = gaussian_filter1d(y, sigma=1)
+            popt, _ = curve_fit(gaussian, x, y,
+                              p0=[y_smooth.max(), x.mean(), 1],
+                              bounds=([0, x.min(), 0], [np.inf, x.max(), np.inf]))
+            fwhm = 2.355 * popt[2]
+            area = np.trapz(y, x)
+            fit_success = True
+        except:
+            fwhm, area = 0, 0
+            fit_success = False
+
+        # Add text annotations on left side
+        text_x = 0.05  # 5% from left edge
+        text_y = 0.85  # 85% from bottom
+        text = f"FWHM: {fwhm:.1f}\nArea: {area:.1f}"
+        axs[idx].text(text_x, text_y, text,
+                    transform=axs[idx].transAxes,
+                    verticalalignment='top',
+                    bbox=dict(facecolor='white', alpha=0.8))
+
+        # Add inset for peak zoom on right side
+        ax_inset = axs[idx].inset_axes([0.55, 0.55, 0.4, 0.4])
+        ax_inset.plot(x, y, 'bo', markersize=3)
+        if fit_success:
+            ax_inset.plot(x, gaussian(x, *popt), 'r-')
+        ax_inset.set_title("Peak Region Zoom")
+        ax_inset.grid(alpha=0.3)
+
+        # Main plot decorations
+        axs[idx].set_title(f"{peak_type} Example\nm/z: {main_peak:.1f}")
+        axs[idx].set_xlabel('m/z')
+        axs[idx].set_ylabel('Corrected Intensity')
+        axs[idx].legend()
+
+    plt.tight_layout()
+    st.pyplot(fig)
+
 # Load pre-trained models
 model_path = 'extratrees_tb_model.pkl'
 rfe_model_path = 'rfe_model.pkl'
@@ -117,19 +178,7 @@ if uploaded_file is not None:
 
         # Plot
         st.subheader("Processed Mass Spectrometry Data")
-        fig, ax = plt.subplots(figsize=(10, 6))
-        ax.plot(processed_data['m/z'], processed_data['Corrected'], label='Processed Spectrum')
-
-        # Mark TB peaks
-        for peak in tb_peaks:
-            ax.axvline(x=peak, color='r', linestyle='--', alpha=0.5)
-            ax.text(peak, processed_data['Corrected'].max()*0.9, str(peak),
-                    rotation=90, ha='center', va='top')
-
-        ax.set_xlabel("m/z")
-        ax.set_ylabel("Corrected Intensity")
-        ax.set_title("Mass Spectrum with TB Diagnostic Peaks Marked")
-        st.pyplot(fig)
+        visualize_real_tolerance(processed_data)
 
     except Exception as e:
         st.error(f"An error occurred while processing the file: {e}")
