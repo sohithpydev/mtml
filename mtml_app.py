@@ -109,12 +109,11 @@ if uploaded_file is not None:
 
         # Predict
         prediction = model.predict(features_reduced)
-        proba = model.predict_proba(features_reduced)
 
         # Display results
         st.subheader("Prediction Result")
         result = "TB Positive" if prediction[0] == 1 else "TB Negative"
-        st.write(f"**Result**: {result} (confidence: {proba[0][1]*100:.1f}%)")
+        st.write(f"**Result**: {result}")
 
         # Plot
         st.subheader("Processed Mass Spectrometry Data")
@@ -131,43 +130,6 @@ if uploaded_file is not None:
         ax.set_ylabel("Corrected Intensity")
         ax.set_title("Mass Spectrum with TB Diagnostic Peaks Marked")
         st.pyplot(fig)
-
-        # Interpretation
-        st.subheader("Interpretation")
-        st.write("The model analyzed these diagnostic peaks for TB detection:")
-
-        peak_features = []
-        for i, peak in enumerate(tb_peaks):
-            intensity = features[i*3]
-            fwhm = features[i*3+1]
-            area = features[i*3+2]
-            peak_features.append({
-                'Peak': peak,
-                'Intensity': intensity,
-                'FWHM': fwhm,
-                'Area': area
-            })
-
-        # Show top contributing peaks
-        feature_importances = model.feature_importances_
-        top_idx = np.argsort(feature_importances)[::-1][:3]  # Top 3 features
-        st.write("**Most influential features**:")
-
-        for idx in top_idx:
-            feat_name = feature_names[idx]
-            peak = feat_name.split('_')[1]
-            ft_type = feat_name.split('_')[0]
-            importance = feature_importances[idx]
-
-            st.write(f"- Peak {peak} ({ft_type}): importance {importance:.3f}")
-
-        # Explanation
-        st.write("""
-        **Interpretation Guide**:
-        - Peaks at specific m/z values are associated with TB biomarkers
-        - Higher intensity, wider FWHM, and larger area values contribute to TB positive diagnosis
-        - The model combines these features using learned patterns from clinical data
-        """)
 
     except Exception as e:
         st.error(f"An error occurred while processing the file: {e}")
