@@ -77,27 +77,27 @@ if uploaded_file is not None:
         for peak in tb_peaks:
             peak_features = get_peak_features(processed_data, peak)
             features.extend([peak_features['Intensity'], peak_features['FWHM'], peak_features['Area']])
-        
-        # Ensure the correct number of features are extracted
-        if len(features) == 15:
+            
+        if len(features) == len(tb_peaks) * 3:  # Dynamic check
             st.write("Extracted Features:")
             st.write(features)
 
-            # Feature scaling
+            # Load pre-fitted scaler (recommended) or fit new
+            # scaler = joblib.load('scaler.pkl')  # Use pre-trained scaler
             scaler = StandardScaler()
-            scaled_features = scaler.fit_transform([features])
-            joblib.dump(scaler, 'scaler.pkl')
-            st.write("Scaled Features:")
-            st.write(scaled_features)
-
+            scaled_features = scaler.fit_transform([features])  # Wrap in list for 2D array
+    
             # Classification
+        try:
             prediction = model.predict(scaled_features)
             prediction_proba = model.predict_proba(scaled_features)
             st.write("Prediction:")
             st.write("TB" if prediction[0] == 1 else "Non-TB")
             st.write("Prediction Probability:")
             st.write(prediction_proba)
-
-            st.success("Data processing, feature extraction, and classification complete!")
-        else:
-            st.error(f"Expected 15 features, but got {len(features)} features. Please check the data and processing steps.")
+            st.success("Analysis complete!")
+        except Exception as e:
+        st.error(f"Classification error: {str(e)}")
+            else:
+                st.error(f"Expected {len(tb_peaks)*3} features, got {len(features)}")
+        
