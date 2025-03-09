@@ -73,14 +73,14 @@ else:
 tb_peaks = [10660, 10100, 9768, 9813, 7931, 7974]
 
 st.title("Tuberculosis Detection from Mass Spectrometry Data")
-st.write("Upload your mass spectrometry data (CSV with 'm/z' and 'Intensity' columns)")
+st.write("Upload your mass spectrometry data (TXT with 'intensity m/z' format)")
 
-uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
+uploaded_file = st.file_uploader("Choose a TXT file", type="txt")
 
 if uploaded_file is not None:
     try:
         # Process data
-        raw_data = pd.read_csv(uploaded_file)
+        raw_data = pd.read_csv(uploaded_file, delim_whitespace=True, header=None, names=['Intensity', 'm/z'])
         processed_data = baseline_correction(raw_data)
 
         # Extract features
@@ -160,7 +160,7 @@ if uploaded_file is not None:
 
 st.sidebar.markdown("""
 **Sample Data Format**:
-- CSV with 2 columns: 'm/z' and 'Intensity'
+- TXT with 2 columns: 'intensity' and 'm/z'
 - m/z values should include the diagnostic peaks (7931, 7974, 9768, 9813, 10100, 10660)
 - Intensity values should be raw instrument measurements
 """)
