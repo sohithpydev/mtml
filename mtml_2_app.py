@@ -127,4 +127,20 @@ if uploaded_model and uploaded_file:
                 with col2:
                     st.write("Probability Distribution:")
                     st.dataframe(pd.DataFrame({
-                        'Class': ['Non-TB
+                        'Class': ['Non-TB', 'TB'],
+                        'Probability': proba[0]
+                    }).set_index('Class'))
+
+                # Show spectrum plot
+                st.subheader("Processed Spectrum")
+                fig, ax = plt.subplots(figsize=(10, 4))
+                ax.plot(processed_data['m/z'], processed_data['Corrected'])
+                for peak in tb_peaks:
+                    ax.axvline(peak, color='r', linestyle='--', alpha=0.3)
+                ax.set_xlabel("m/z")
+                ax.set_ylabel("Intensity")
+                st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Application Error: {str(e)}")
+        st.stop()
