@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import joblib
-import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
 from sklearn.preprocessing import StandardScaler
@@ -12,92 +11,131 @@ def gaussian(x, amp, cen, wid):
     return amp * np.exp(-(x - cen)**2 / (2 * wid ** 2))
 
 def baseline_correction(data, poly_order=3):
-    x = data['m/z']
-    y = data['Intensity']
-    coeffs = np.polyfit(x, y, poly_order)
-    baseline = np.polyval(coeffs, x)
-    corrected = y - baseline
-    corrected[corrected < 0] = 0
-    data['Corrected'] = corrected
-    return data
+    try:
+        x = data['m/z']
+        y = data['Intensity']
+        coeffs = np.polyfit(x, y, poly_order)
+        baseline = np.polyval(coeffs, x)
+        corrected = y - baseline
+        corrected[corrected < 0] = 0
+        data['Corrected'] = corrected
+        return data
+    except Exception as e:
+        st.error(f"Baseline correction failed: {str(e)}")
+        return None
 
 def dynamic_tolerance(data, peak_mz, window=50, min_tol=0.5, max_tol=20):
-    region = data[(data['m/z'] > peak_mz - window) & (data['m/z'] < peak_mz + window)]
-    if region.empty:
+    try:
+        region = data[(data['m/z'] > peak_mz - window) & (data['m/z'] < peak_mz + window)]
+        if region.empty:
+            return min_tol
+        tol = 2 * region['m/z'].std()
+        return np.clip(tol, min_tol, max_tol)
+    except:
         return min_tol
-    tol = 2 * region['m/z'].std()
-    return np.clip(tol, min_tol, max_tol)
 
 def get_peak_features(data, peak_mz):
-    tol = dynamic_tolerance(data, peak_mz)
-    peak_data = data[(data['m/z'] > peak_mz - tol) & (data['m/z'] < peak_mz + tol)]
-    if len(peak_data) < 3:
-        return {'Intensity': 0, 'FWHM': 0, 'Area': 0}
-    x = peak_data['m/z'].values
-    y = peak_data['Corrected'].values
-    y_smooth = gaussian_filter1d(y, sigma=1)
     try:
-        popt, _ = curve_fit(gaussian, x, y, p0=[y_smooth.max(), x[y_smooth.argmax()], 1], bounds=([0, x.min(), 0], [np.inf, x.max(), np.inf]))
-        amp, cen, wid = popt
-        fwhm = 2.355 * wid
-        area = np.trapezoid(y, x)
-    except Exception as e:
-        st.error(f"Error in curve fitting: {e}")
-        amp = y.max() if len(y) > 0 else 0
-        fwhm = 0
-        area = 0
-    return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
+        tol = dynamic_tolerance(data, peak_mz)
+        peak_data = data[(data['m/z'] > peak_mz - tol) & (data['m/z'] < peak_mz + tol)].copy()
+        
+        if len(peak_data) < 3:
+            return {'Intensity': 0, 'FWHM': 0, 'Area': 0}
+        
+        x = peak_data['m/z'].values
+        y = peak_data['Corrected'].values
+        
+        y_smooth = gaussian_filter1d(y, sigma=1)
+        if len(y_smooth) == 0:
+            return {'Intensity': 0, 'FWHM': 0, 'Area': 0}
 
-# Streamlit app
+        try:
+            popt, _ = curve_fit(gaussian, x, y, 
+                                p0=[y_smooth.max(), x[y_smooth.argmax()], 1],
+                                bounds=([0, x.min(), 0], [np.inf, x.max(), np.inf]))
+            amp, cen, wid = popt
+            fwhm = 2.355 * wid
+            area = np.trapz(y, x)  # Corrected from trapezoid to trapz
+        except RuntimeError:
+            amp = y.max() if len(y) > 0 else 0
+            fwhm = 0
+            area = np.trapz(y, x) if len(y) > 0 else 0
+        
+        return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
+    
+    except Exception as e:
+        st.error(f"Error processing peak {peak_mz}: {str(e)}")
+        return {'Intensity': 0, 'FWHM': 0, 'Area': 0}
+
+# Streamlit app interface
 st.title('Mass Spectrometry Data Processing and Classification')
 st.write('This app processes and classifies mass spectrometry data.')
 
-# Model uploader
-uploaded_model = st.file_uploader("Upload the ExtraTrees RFE Model (extratrees_rfe.pkl)", type="pkl")
-if uploaded_model is not None:
-    model = joblib.load(uploaded_model)
-    st.success("Model loaded successfully!")
+# Initialize session state
+if 'processed' not in st.session_state:
+    st.session_state.processed = False
 
-# Data uploader
-uploaded_file = st.file_uploader("Choose a TXT file", type="txt")
-if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file, sep='\s+', header=None, names=["m/z", "Intensity"])
-    st.write("Data Preview:")
-    st.write(data.head())
+# File uploaders
+model_file = st.file_uploader("Upload Trained Model (pkl)", type="pkl")
+data_file = st.file_uploader("Upload Mass Spec Data (txt)", type="txt")
 
-    if st.button('Process and Classify Data'):
-        st.write("Processing data...")
-        processed_data = baseline_correction(data)
-        st.write("Processed Data:")
-        st.write(processed_data.head())
-
-        # Feature extraction
+if model_file and data_file:
+    try:
+        model = joblib.load(model_file)
+        scaler = joblib.load(model_file)  # Assuming scaler is saved with model
         tb_peaks = [10660, 10100, 9768, 9813, 7931, 7974]
-        features = []
-        for peak in tb_peaks:
-            peak_features = get_peak_features(processed_data, peak)
-            features.extend([peak_features['Intensity'], peak_features['FWHM'], peak_features['Area']])
-            
-        if len(features) == len(tb_peaks) * 3:  # Dynamic check
-            st.write("Extracted Features:")
-            st.write(features)
-
-            # Load pre-fitted scaler (recommended) or fit new
-            # scaler = joblib.load('scaler.pkl')  # Use pre-trained scaler
-            scaler = StandardScaler()
-            scaled_features = scaler.fit_transform([features])  # Wrap in list for 2D array
-    
-            # Classification
-        try:
-            prediction = model.predict(scaled_features)
-            prediction_proba = model.predict_proba(scaled_features)
-            st.write("Prediction:")
-            st.write("TB" if prediction[0] == 1 else "Non-TB")
-            st.write("Prediction Probability:")
-            st.write(prediction_proba)
-            st.success("Analysis complete!")
-        except Exception as e:
-        st.error(f"Classification error: {str(e)}")
-            else:
-                st.error(f"Expected {len(tb_peaks)*3} features, got {len(features)}")
+        expected_features = len(tb_peaks) * 3  # 6 peaks * 3 features
         
+        if st.button('Process and Classify'):
+            # Load and validate data
+            raw_data = pd.read_csv(data_file, sep='\s+', header=None, names=["m/z", "Intensity"])
+            if raw_data.empty or (raw_data['Intensity'] < 0).any():
+                st.error("Invalid data format or negative intensities detected")
+                st.stop()
+
+            # Processing pipeline
+            with st.spinner('Processing data...'):
+                processed_data = baseline_correction(raw_data)
+                if processed_data is None:
+                    st.stop()
+
+                # Feature extraction
+                features = []
+                progress_bar = st.progress(0)
+                for i, peak in enumerate(tb_peaks):
+                    peak_features = get_peak_features(processed_data, peak)
+                    features.extend([peak_features['Intensity'], 
+                                  peak_features['FWHM'], 
+                                  peak_features['Area']])
+                    progress_bar.progress((i+1)/len(tb_peaks))
+
+                # Validation
+                if len(features) != expected_features:
+                    st.error(f"Feature mismatch: Expected {expected_features}, got {len(features)}")
+                    st.stop()
+
+                # Scaling and prediction
+                scaled_features = scaler.transform([features])
+                prediction = model.predict(scaled_features)
+                proba = model.predict_proba(scaled_features)
+
+                # Display results
+                st.success("Analysis Complete!")
+                st.metric("Prediction", "TB" if prediction[0] else "Non-TB")
+                st.write("Probability Distribution:")
+                st.write(pd.DataFrame({
+                    'Class': ['Non-TB', 'TB'],
+                    'Probability': proba[0]
+                }).set_index('Class'))
+
+                # Show feature visualization
+                st.subheader("Feature Visualization")
+                fig, ax = plt.subplots(figsize=(10, 4))
+                ax.plot(processed_data['m/z'], processed_data['Corrected'])
+                for peak in tb_peaks:
+                    ax.axvline(peak, color='r', linestyle='--', alpha=0.3)
+                st.pyplot(fig)
+
+    except Exception as e:
+        st.error(f"Application Error: {str(e)}")
+        st.stop()
