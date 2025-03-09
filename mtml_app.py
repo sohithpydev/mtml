@@ -15,9 +15,6 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
 import os
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.feature_selection import RFECV
-from sklearn.preprocessing import StandardScaler
 
 # Define processing functions from the original notebook
 def gaussian(x, amp, cen, wid):
