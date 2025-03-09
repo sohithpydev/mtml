@@ -15,6 +15,9 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
 import os
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_selection import RFECV
+from sklearn.preprocessing import StandardScaler
 
 # Define processing functions from the original notebook
 def gaussian(x, amp, cen, wid):
@@ -63,12 +66,17 @@ def get_peak_features(data, peak_mz):
 
     return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
 
-# Load pre-trained model
+# Load pre-trained models
 model_path = 'extratrees_tb_model.pkl'
-if not os.path.exists(model_path):
-    st.error(f"Model file not found: {model_path}")
+rfe_model_path = 'rfe_model.pkl'
+scaler_path = 'scaler.pkl'
+
+if not os.path.exists(model_path) or not os.path.exists(rfe_model_path) or not os.path.exists(scaler_path):
+    st.error(f"Model file not found: {model_path} or {rfe_model_path} or {scaler_path}")
 else:
     model = joblib.load(model_path)
+    rfe = joblib.load(rfe_model_path)
+    scaler = joblib.load(scaler_path)
 
 tb_peaks = [10660, 10100, 9768, 9813, 7931, 7974]
 
@@ -93,9 +101,15 @@ if uploaded_file is not None:
         feature_names = [f'{ft}_{peak}' for peak in tb_peaks for ft in ['Intensity', 'FWHM', 'Area']]
         features_df = pd.DataFrame([features], columns=feature_names)
 
+        # Standardize the features
+        features_scaled = scaler.transform(features_df)
+
+        # Reduce features using RFE
+        features_reduced = rfe.transform(features_scaled)
+
         # Predict
-        prediction = model.predict(features_df)
-        proba = model.predict_proba(features_df)
+        prediction = model.predict(features_reduced)
+        proba = model.predict_proba(features_reduced)
 
         # Display results
         st.subheader("Prediction Result")
