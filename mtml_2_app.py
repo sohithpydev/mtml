@@ -101,7 +101,7 @@ if uploaded_model and uploaded_file:
                     peak_features = get_peak_features(processed_data, peak)
                     features.extend([peak_features['Intensity'],
                                     peak_features['FWHM'],
-                                    peak_features['Area'])
+                                    peak_features['Area']])
 
                 # Validate feature count
                 expected_features = len(tb_peaks) * 3
