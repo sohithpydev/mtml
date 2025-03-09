@@ -77,22 +77,27 @@ if uploaded_file is not None:
         for peak in tb_peaks:
             peak_features = get_peak_features(processed_data, peak)
             features.extend([peak_features['Intensity'], peak_features['FWHM'], peak_features['Area']])
-        st.write("Extracted Features:")
-        st.write(features)
+        
+        # Ensure the correct number of features are extracted
+        if len(features) == 15:
+            st.write("Extracted Features:")
+            st.write(features)
 
-        # Feature scaling
-        scaler = StandardScaler()
-        scaled_features = scaler.fit_transform([features])
-        joblib.dump(scaler, 'scaler.pkl')
-        st.write("Scaled Features:")
-        st.write(scaled_features)
+            # Feature scaling
+            scaler = StandardScaler()
+            scaled_features = scaler.fit_transform([features])
+            joblib.dump(scaler, 'scaler.pkl')
+            st.write("Scaled Features:")
+            st.write(scaled_features)
 
-        # Classification
-        prediction = model.predict(scaled_features)
-        prediction_proba = model.predict_proba(scaled_features)
-        st.write("Prediction:")
-        st.write("TB" if prediction[0] == 1 else "Non-TB")
-        st.write("Prediction Probability:")
-        st.write(prediction_proba)
+            # Classification
+            prediction = model.predict(scaled_features)
+            prediction_proba = model.predict_proba(scaled_features)
+            st.write("Prediction:")
+            st.write("TB" if prediction[0] == 1 else "Non-TB")
+            st.write("Prediction Probability:")
+            st.write(prediction_proba)
 
-        st.success("Data processing, feature extraction, and classification complete!")
+            st.success("Data processing, feature extraction, and classification complete!")
+        else:
+            st.error(f"Expected 15 features, but got {len(features)} features. Please check the data and processing steps.")
