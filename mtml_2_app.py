@@ -54,7 +54,7 @@ def get_peak_features(data, peak_mz):
 
     return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
 
-# Load pre-trained model
+# Load pre-trained model from the backend
 model_path = 'extratrees_model.pkl'
 if not os.path.exists(model_path):
     st.error(f"Model file not found: {model_path}")
@@ -64,7 +64,7 @@ else:
 tb_peaks = [10660, 10100, 9768, 9813, 7931, 7974]
 
 st.title("Tuberculosis Detection from Mass Spectrometry Data")
-st.write("Upload your mass spectrometry data (TXT with 'intensity m/z' format)")
+st.write("Upload your mass spectrometry data (TXT with 'm/z intensity' format)")
 
 uploaded_file = st.file_uploader("Choose a TXT file", type="txt")
 
