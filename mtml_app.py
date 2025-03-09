@@ -14,6 +14,7 @@ import joblib
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
+import os
 
 # Define processing functions from the original notebook
 def gaussian(x, amp, cen, wid):
@@ -54,7 +55,8 @@ def get_peak_features(data, peak_mz):
         amp, cen, wid = popt
         fwhm = 2.355 * wid
         area = np.trapz(y, x)
-    except:
+    except Exception as e:
+        st.error(f"Error in curve fitting: {e}")
         amp = y.max() if len(y) > 0 else 0
         fwhm = 0
         area = 0
@@ -62,7 +64,12 @@ def get_peak_features(data, peak_mz):
     return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
 
 # Load pre-trained model
-model = joblib.load('extratrees_tb_model.pkl')
+model_path = 'extratrees_tb_model.pkl'
+if not os.path.exists(model_path):
+    st.error(f"Model file not found: {model_path}")
+else:
+    model = joblib.load(model_path)
+
 tb_peaks = [10660, 10100, 9768, 9813, 7931, 7974]
 
 st.title("Tuberculosis Detection from Mass Spectrometry Data")
@@ -71,81 +78,85 @@ st.write("Upload your mass spectrometry data (CSV with 'm/z' and 'Intensity' col
 uploaded_file = st.file_uploader("Choose a CSV file", type="csv")
 
 if uploaded_file is not None:
-    # Process data
-    raw_data = pd.read_csv(uploaded_file)
-    processed_data = baseline_correction(raw_data)
+    try:
+        # Process data
+        raw_data = pd.read_csv(uploaded_file)
+        processed_data = baseline_correction(raw_data)
 
-    # Extract features
-    features = []
-    for peak in tb_peaks:
-        peak_features = get_peak_features(processed_data, peak)
-        features.extend([peak_features['Intensity'], peak_features['FWHM'], peak_features['Area']])
+        # Extract features
+        features = []
+        for peak in tb_peaks:
+            peak_features = get_peak_features(processed_data, peak)
+            features.extend([peak_features['Intensity'], peak_features['FWHM'], peak_features['Area']])
 
-    # Create feature names
-    feature_names = [f'{ft}_{peak}' for peak in tb_peaks for ft in ['Intensity', 'FWHM', 'Area']]
-    features_df = pd.DataFrame([features], columns=feature_names)
+        # Create feature names
+        feature_names = [f'{ft}_{peak}' for peak in tb_peaks for ft in ['Intensity', 'FWHM', 'Area']]
+        features_df = pd.DataFrame([features], columns=feature_names)
 
-    # Predict
-    prediction = model.predict(features_df)
-    proba = model.predict_proba(features_df)
+        # Predict
+        prediction = model.predict(features_df)
+        proba = model.predict_proba(features_df)
 
-    # Display results
-    st.subheader("Prediction Result")
-    result = "TB Positive" if prediction[0] == 1 else "TB Negative"
-    st.write(f"**Result**: {result} (confidence: {proba[0][1]*100:.1f}%)")
+        # Display results
+        st.subheader("Prediction Result")
+        result = "TB Positive" if prediction[0] == 1 else "TB Negative"
+        st.write(f"**Result**: {result} (confidence: {proba[0][1]*100:.1f}%)")
 
-    # Plot
-    st.subheader("Processed Mass Spectrometry Data")
-    fig, ax = plt.subplots(figsize=(10, 6))
-    ax.plot(processed_data['m/z'], processed_data['Corrected'], label='Processed Spectrum')
+        # Plot
+        st.subheader("Processed Mass Spectrometry Data")
+        fig, ax = plt.subplots(figsize=(10, 6))
+        ax.plot(processed_data['m/z'], processed_data['Corrected'], label='Processed Spectrum')
 
-    # Mark TB peaks
-    for peak in tb_peaks:
-        ax.axvline(x=peak, color='r', linestyle='--', alpha=0.5)
-        ax.text(peak, processed_data['Corrected'].max()*0.9, str(peak),
-                rotation=90, ha='center', va='top')
+        # Mark TB peaks
+        for peak in tb_peaks:
+            ax.axvline(x=peak, color='r', linestyle='--', alpha=0.5)
+            ax.text(peak, processed_data['Corrected'].max()*0.9, str(peak),
+                    rotation=90, ha='center', va='top')
 
-    ax.set_xlabel("m/z")
-    ax.set_ylabel("Corrected Intensity")
-    ax.set_title("Mass Spectrum with TB Diagnostic Peaks Marked")
-    st.pyplot(fig)
+        ax.set_xlabel("m/z")
+        ax.set_ylabel("Corrected Intensity")
+        ax.set_title("Mass Spectrum with TB Diagnostic Peaks Marked")
+        st.pyplot(fig)
 
-    # Interpretation
-    st.subheader("Interpretation")
-    st.write("The model analyzed these diagnostic peaks for TB detection:")
+        # Interpretation
+        st.subheader("Interpretation")
+        st.write("The model analyzed these diagnostic peaks for TB detection:")
 
-    peak_features = []
-    for i, peak in enumerate(tb_peaks):
-        intensity = features[i*3]
-        fwhm = features[i*3+1]
-        area = features[i*3+2]
-        peak_features.append({
-            'Peak': peak,
-            'Intensity': intensity,
-            'FWHM': fwhm,
-            'Area': area
-        })
+        peak_features = []
+        for i, peak in enumerate(tb_peaks):
+            intensity = features[i*3]
+            fwhm = features[i*3+1]
+            area = features[i*3+2]
+            peak_features.append({
+                'Peak': peak,
+                'Intensity': intensity,
+                'FWHM': fwhm,
+                'Area': area
+            })
 
-    # Show top contributing peaks
-    feature_importances = model.feature_importances_
-    top_idx = np.argsort(feature_importances)[::-1][:3]  # Top 3 features
-    st.write("**Most influential features**:")
+        # Show top contributing peaks
+        feature_importances = model.feature_importances_
+        top_idx = np.argsort(feature_importances)[::-1][:3]  # Top 3 features
+        st.write("**Most influential features**:")
 
-    for idx in top_idx:
-        feat_name = feature_names[idx]
-        peak = feat_name.split('_')[1]
-        ft_type = feat_name.split('_')[0]
-        importance = feature_importances[idx]
+        for idx in top_idx:
+            feat_name = feature_names[idx]
+            peak = feat_name.split('_')[1]
+            ft_type = feat_name.split('_')[0]
+            importance = feature_importances[idx]
 
-        st.write(f"- Peak {peak} ({ft_type}): importance {importance:.3f}")
+            st.write(f"- Peak {peak} ({ft_type}): importance {importance:.3f}")
 
-    # Explanation
-    st.write("""
-    **Interpretation Guide**:
-    - Peaks at specific m/z values are associated with TB biomarkers
-    - Higher intensity, wider FWHM, and larger area values contribute to TB positive diagnosis
-    - The model combines these features using learned patterns from clinical data
-    """)
+        # Explanation
+        st.write("""
+        **Interpretation Guide**:
+        - Peaks at specific m/z values are associated with TB biomarkers
+        - Higher intensity, wider FWHM, and larger area values contribute to TB positive diagnosis
+        - The model combines these features using learned patterns from clinical data
+        """)
+
+    except Exception as e:
+        st.error(f"An error occurred while processing the file: {e}")
 
 st.sidebar.markdown("""
 **Sample Data Format**:
