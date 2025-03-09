@@ -137,6 +137,10 @@ if uploaded_file is not None:
         # Process data
         raw_data = pd.read_csv(uploaded_file, delim_whitespace=True, header=None, names=['Intensity', 'm/z'])
         processed_data = baseline_correction(raw_data)
+        
+        # Log processed data for debugging
+        st.write("Processed Data:")
+        st.dataframe(processed_data)
 
         # Extract features
         features = []
@@ -144,15 +148,27 @@ if uploaded_file is not None:
             peak_features = get_peak_features(processed_data, peak)
             features.extend([peak_features['Intensity'], peak_features['FWHM'], peak_features['Area']])
 
+        # Log features for debugging
+        st.write("Extracted Features:")
+        st.write(features)
+
         # Create feature names
         feature_names = [f'{ft}_{peak}' for peak in tb_peaks for ft in ['Intensity', 'FWHM', 'Area']]
         features_df = pd.DataFrame([features], columns=feature_names)
 
         # Standardize the features
         features_scaled = scaler.transform(features_df)
+        
+        # Log scaled features for debugging
+        st.write("Scaled Features:")
+        st.write(features_scaled)
 
         # Reduce features using RFE
         features_reduced = rfe.transform(features_scaled)
+        
+        # Log reduced features for debugging
+        st.write("Reduced Features:")
+        st.write(features_reduced)
 
         # Predict
         prediction = model.predict(features_reduced)
