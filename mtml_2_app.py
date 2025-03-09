@@ -40,7 +40,7 @@ def get_peak_features(data, peak_mz):
         popt, _ = curve_fit(gaussian, x, y, p0=[y_smooth.max(), x[y_smooth.argmax()], 1], bounds=([0, x.min(), 0], [np.inf, x.max(), np.inf]))
         amp, cen, wid = popt
         fwhm = 2.355 * wid
-        area = np.trapz(y, x)
+        area = np.trapezoid(y, x)
     except Exception as e:
         st.error(f"Error in curve fitting: {e}")
         amp = y.max() if len(y) > 0 else 0
