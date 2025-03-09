@@ -4,10 +4,11 @@ import numpy as np
 import joblib
 from scipy.optimize import curve_fit
 from scipy.ndimage import gaussian_filter1d
+import matplotlib.pyplot as plt
 
 # Define processing functions
 def gaussian(x, amp, cen, wid):
-    return amp * np.exp(-(x - cen)**2 / (2 * wid ** 2)
+    return amp * np.exp(-(x - cen)**2 / (2 * wid ** 2))
 
 def baseline_correction(data, poly_order=3):
     try:
