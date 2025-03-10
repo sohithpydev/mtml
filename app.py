@@ -125,5 +125,10 @@ if uploaded_file is not None:
     
     # Display prediction probability chart
     st.subheader("Prediction Probability Chart:")
-    st.bar_chart([prediction_prob[0], 1 - prediction_prob[0]], x=["TB", "Non-TB"], use_container_width=True)
+    prediction_data = pd.DataFrame({
+        'Class': ['TB','Non-TB'],
+        'Probability': [prediction_prob[0], 1 - prediction_prob[0]]
+    })
+    st.bar_chart(prediction_data.set_index('Class')['Probability'])
+
 
