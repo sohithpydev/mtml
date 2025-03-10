@@ -192,6 +192,9 @@ if uploaded_file is not None:
 
     # Feature Correlation Matrix
     st.subheader("Feature Correlation Matrix")
+    st.write(f"Raw features shape: {raw_features.shape}")
+    st.write("Raw features:", raw_features)
+    st.write("Feature Variance:", raw_features.var(axis=0)) 
 
     # Flatten raw_features from (1, 1, 18) to (1, 18)
     raw_features_flattened = raw_features.reshape(1, -1)
