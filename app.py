@@ -134,6 +134,76 @@ if uploaded_file is not None:
 
     # Display the bar chart using the DataFrame
     st.bar_chart(prediction_data.set_index('Class')['Probability'])
+# Zoomed-In Peak View
+st.subheader("Zoomed-In View of the Peak")
+
+# Slider for m/z range selection
+mz_min, mz_max = st.slider(
+    "Select m/z range", min_value=float(df['m/z'].min()), max_value=float(df['m/z'].max()),
+    value=(df['m/z'].min(), df['m/z'].max()), step=0.1
+)
+
+# Zoomed-in plot for selected m/z range
+zoomed_df = df[(df['m/z'] >= mz_min) & (df['m/z'] <= mz_max)]
+fig_zoom, ax_zoom = plt.subplots(figsize=(10, 6))
+ax_zoom.plot(zoomed_df['m/z'], zoomed_df['Corrected'], label="Zoomed Spectrum")
+ax_zoom.set_xlabel("m/z")
+ax_zoom.set_ylabel("Intensity")
+ax_zoom.set_title("Zoomed-In MALDI-TOF Spectrum")
+ax_zoom.legend()
+st.pyplot(fig_zoom)
+
+# Peak Fitting Plot
+st.subheader("Gaussian Fit on Selected Peak")
+
+# Use dynamic tolerance to extract the selected peak data
+peak_mz = st.selectbox("Select m/z value for peak fitting", TB_PEAKS)
+tol = dynamic_tolerance(df, peak_mz)
+peak_data = df[(df['m/z'] > peak_mz - tol) & (df['m/z'] < peak_mz + tol)]
+
+x = peak_data['m/z'].values
+y = peak_data['Corrected'].values
+y_smooth = gaussian_filter1d(y, sigma=1)
+
+try:
+    popt, _ = curve_fit(gaussian, x, y, p0=[y_smooth.max(), x[y_smooth.argmax()], 1],
+                        bounds=([0, x.min(), 0], [np.inf, x.max(), np.inf]))
+    amp, cen, wid = popt
+    fwhm = 2.355 * wid
+    area = np.trapz(y, x)
+
+    # Plot Gaussian fit
+    fig_fit, ax_fit = plt.subplots(figsize=(10, 6))
+    ax_fit.plot(x, y, 'bo', markersize=3, label="Raw Data")
+    x_fit = np.linspace(x.min(), x.max(), 200)
+    y_fit = gaussian(x_fit, *popt)
+    ax_fit.plot(x_fit, y_fit, 'r-', label="Gaussian Fit")
+    ax_fit.fill_between(x_fit, y_fit, alpha=0.3, color="red", label="Area Under Curve")
+    ax_fit.hlines(amp / 2, cen - (fwhm / 2), cen + (fwhm / 2), colors="blue", linestyles="dashed", label="FWHM")
+    ax_fit.set_title(f"Gaussian Fit for Peak at m/z = {peak_mz:.1f}")
+    ax_fit.set_xlabel("m/z")
+    ax_fit.set_ylabel("Corrected Intensity")
+    ax_fit.legend()
+    st.pyplot(fig_fit)
+
+except:
+    st.warning(f"Gaussian fit failed for peak at m/z = {peak_mz:.1f}")
+
+# Feature Correlation Matrix
+st.subheader("Feature Correlation Matrix")
+
+# Assuming features are available in a DataFrame for analysis
+features_df = pd.DataFrame([raw_features], columns=[f'Intensity_{peak}' for peak in TB_PEAKS] +
+                            [f'FWHM_{peak}' for peak in TB_PEAKS] +
+                            [f'Area_{peak}' for peak in TB_PEAKS])
+
+# Plot correlation matrix
+import seaborn as sns
+corr = features_df.corr()
+fig_corr, ax_corr = plt.subplots(figsize=(10, 6))
+sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax_corr)
+ax_corr.set_title("Feature Correlation Matrix")
+st.pyplot(fig_corr)
 
     
 
