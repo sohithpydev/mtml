@@ -148,22 +148,65 @@ if uploaded_file is not None:
     ax_zoom.legend()
     st.pyplot(fig_zoom)
 
-    # Peak Fitting Plot
-    st.subheader("Gaussian Fit on Selected Peak")
-    peak_mz = st.selectbox("Select m/z value for peak fitting", TB_PEAKS)
-    tol = dynamic_tolerance(df, peak_mz)
-    peak_data = df[(df['m/z'] > peak_mz - tol) & (df['m/z'] < peak_mz + tol)]
-    x = peak_data['m/z'].values
-    y = peak_data['Corrected'].values
+# Modified Peak Fitting Plot Section
+st.subheader("Gaussian Fit on Selected Peak")
+peak_mz = st.selectbox("Select m/z value for peak fitting", TB_PEAKS)
 
-    try:
-        popt, _ = curve_fit(gaussian, x, y, p0=[y.max(), x[np.argmax(y)], 1])
-        x_fit = np.linspace(x.min(), x.max(), 200)
-        y_fit = gaussian(x_fit, *popt)
-        fig_fit, ax_fit = plt.subplots(figsize=(10, 6))
-        ax_fit.plot(x, y, 'bo', markersize=3, label="Raw Data")
-        ax_fit.plot(x_fit, y_fit, 'r-', label="Gaussian Fit")
-        ax_fit.legend()
-        st.pyplot(fig_fit)
-    except:
-        st.warning(f"Gaussian fit failed for peak at m/z = {peak_mz:.1f}")
+# Get precomputed peak details
+idx = TB_PEAKS.index(peak_mz)
+detail = peak_details[idx]
+x = detail['x']
+y = detail['y']
+y_smooth = detail['y_smooth']
+tol = detail['tol']
+fwhm = detail['FWHM']
+area = detail['Area']
+
+# Create figure with multiple components
+fig_fit, ax_fit = plt.subplots(figsize=(12, 7))
+
+# Plot raw data and smoothed data
+ax_fit.plot(x, y, 'bo', markersize=4, alpha=0.7, label="Raw Data Points")
+ax_fit.plot(x, y_smooth, 'g--', linewidth=2, label="Smoothed Data")
+
+# Plot Gaussian fit if available
+if detail['fit_success']:
+    x_fit = np.linspace(x.min(), x.max(), 200)
+    y_fit = gaussian(x_fit, detail['amp'], detail['cen'], detail['wid'])
+    ax_fit.plot(x_fit, y_fit, 'r-', linewidth=2, label="Gaussian Fit")
+    ax_fit.fill_between(x_fit, y_fit, alpha=0.2, color='red', label="Fitted Area")
+    
+    # Add FWHM markers
+    half_max = detail['amp'] / 2
+    left = detail['cen'] - detail['wid'] * np.sqrt(2 * np.log(2))
+    right = detail['cen'] + detail['wid'] * np.sqrt(2 * np.log(2))
+    ax_fit.hlines(half_max, left, right, colors='purple', linestyles='dashed', 
+                  label=f'FWHM ({fwhm:.1f})')
+    ax_fit.vlines([left, right], 0, half_max, colors='purple', linestyles='dashed')
+
+# Add tolerance region background
+ax_fit.axvspan(peak_mz - tol, peak_mz + tol, color='yellow', alpha=0.2, 
+               label=f'Tolerance Region (±{tol:.1f})')
+
+# Configure plot aesthetics
+ax_fit.set_xlabel("m/z", fontsize=12)
+ax_fit.set_ylabel("Intensity", fontsize=12)
+ax_fit.set_title(f"Detailed Analysis of Peak at m/z = {peak_mz}", fontsize=14)
+ax_fit.legend(loc='upper right', frameon=True)
+ax_fit.grid(True, alpha=0.3)
+
+# Display the plot
+st.pyplot(fig_fit)
+
+# Show quantitative metrics in columns
+col1, col2, col3 = st.columns(3)
+with col1:
+    st.metric("FWHM", f"{fwhm:.2f}")
+with col2:
+    st.metric("Peak Area", f"{area:.2f}")
+with col3:
+    st.metric("Tolerance Range", f"±{tol:.2f}")
+
+# Additional annotations
+st.write(f"**Peak Center:** {detail['cen']:.2f} m/z")
+st.write(f"**Peak Intensity:** {detail['amp']:.2f}")
