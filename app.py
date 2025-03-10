@@ -192,8 +192,11 @@ except:
 # Feature Correlation Matrix
 st.subheader("Feature Correlation Matrix")
 
-# Assuming features are available in a DataFrame for analysis
-features_df = pd.DataFrame([raw_features], columns=[f'Intensity_{peak}' for peak in TB_PEAKS] +
+# Flatten raw_features from (1, 1, 18) to (1, 18)
+raw_features_flattened = raw_features.reshape(-1)
+
+# Create the features DataFrame
+features_df = pd.DataFrame([raw_features_flattened], columns=[f'Intensity_{peak}' for peak in TB_PEAKS] +
                             [f'FWHM_{peak}' for peak in TB_PEAKS] +
                             [f'Area_{peak}' for peak in TB_PEAKS])
 
