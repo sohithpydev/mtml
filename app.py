@@ -193,10 +193,10 @@ except:
 st.subheader("Feature Correlation Matrix")
 
 # Flatten raw_features from (1, 1, 18) to (1, 18)
-raw_features_flattened = raw_features.reshape(-1)
+raw_features_flattened = raw_features.reshape(1, -1)
 
 # Create the features DataFrame
-features_df = pd.DataFrame([raw_features_flattened], columns=[f'Intensity_{peak}' for peak in TB_PEAKS] +
+features_df = pd.DataFrame([raw_features_flattened[0]], columns=[f'Intensity_{peak}' for peak in TB_PEAKS] +
                             [f'FWHM_{peak}' for peak in TB_PEAKS] +
                             [f'Area_{peak}' for peak in TB_PEAKS])
 
@@ -207,6 +207,7 @@ fig_corr, ax_corr = plt.subplots(figsize=(10, 6))
 sns.heatmap(corr, annot=True, cmap='coolwarm', ax=ax_corr)
 ax_corr.set_title("Feature Correlation Matrix")
 st.pyplot(fig_corr)
+
 
     
 
