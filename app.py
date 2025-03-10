@@ -1,4 +1,4 @@
-import os
+rimport os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -100,7 +100,7 @@ if uploaded_file is not None:
     # Assuming pre-trained scaler, RFE selector, and model are loaded
     scaler = joblib.load("scaler.pkl")
     rfe_selector = joblib.load("rfe_selector.pkl")
-    model = joblib.load("best_model.pkl")
+    model = joblib.load("extra_tree_model.pkl")
 
     # Apply transformations
     scaled_features = scaler.transform(raw_features)
