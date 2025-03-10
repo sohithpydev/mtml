@@ -7,7 +7,7 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 
 # Configuration - Update these paths as needed
-MODEL_PATH = "best_model.pkl"  # Path to your saved top model
+MODEL_PATH = "extra_tree_model.pkl"  # Path to your saved top model
 SCALER_PATH = "scaler.pkl"     # Path to saved scaler
 RFECV_PATH = "rfe_selector.pkl" # Path to saved RFECV object
 TB_PEAKS = [10660, 10100, 9768, 9813, 7931, 7974]  # Same as training peaks
