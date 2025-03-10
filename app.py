@@ -58,44 +58,7 @@ def get_peak_features(data, peak_mz):
         fwhm = 0
         area = 0
 
-    return {'Intensity': amp, 'FWHM': fwhm, 'Area': area, 'Center': cen, 'Width': wid}
-
-# Peak Fitting Plot
-st.subheader("Gaussian Fit on Selected Peak")
-peak_mz = st.selectbox("Select m/z value for peak fitting", TB_PEAKS)
-tol = dynamic_tolerance(df, peak_mz)
-peak_data = df[(df['m/z'] > peak_mz - tol) & (df['m/z'] < peak_mz + tol)]
-x = peak_data['m/z'].values
-y = peak_data['Corrected'].values
-y_smooth = gaussian_filter1d(y, sigma=1)
-
-try:
-    popt, _ = curve_fit(gaussian, x, y, p0=[y.max(), x[np.argmax(y)], 1])
-    amp, cen, wid = popt
-    fwhm = 2.355 * wid
-    area = np.trapz(gaussian(x, *popt), x)
-
-    x_fit = np.linspace(x.min(), x.max(), 200)
-    y_fit = gaussian(x_fit, *popt)
-
-    fig_fit, ax_fit = plt.subplots(figsize=(10, 6))
-    ax_fit.scatter(x, y, color='blue', label="Raw Data", s=10)
-    ax_fit.plot(x, y_smooth, 'g-', label="Smoothed Data")
-    ax_fit.plot(x_fit, y_fit, 'r-', label="Gaussian Fit")
-    ax_fit.fill_between(x_fit, y_fit, alpha=0.3, color='red', label="Shaded Area (Integral)")
-    ax_fit.axvline(cen - fwhm / 2, color='purple', linestyle='--', label="FWHM Bounds")
-    ax_fit.axvline(cen + fwhm / 2, color='purple', linestyle='--')
-    ax_fit.legend()
-    st.pyplot(fig_fit)
-
-    st.subheader("Extracted Feature Values")
-    st.write(f"**Intensity:** {amp:.2f}")
-    st.write(f"**FWHM:** {fwhm:.2f}")
-    st.write(f"**Area:** {area:.2f}")
-    st.write(f"**Center:** {cen:.2f}")
-    st.write(f"**Width:** {wid:.2f}")
-except:
-    st.warning(f"Gaussian fit failed for peak at m/z = {peak_mz:.1f}")
+    return {'Intensity': amp, 'FWHM': fwhm, 'Area': area}
 
 # Process uploaded file
 def process_single_file(file_path):
