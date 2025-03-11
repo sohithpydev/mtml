@@ -163,7 +163,12 @@ if uploaded_file is not None:
         fig_fit, ax_fit = plt.subplots(figsize=(10, 6))
         ax_fit.plot(x, y, 'bo', markersize=3, label="Raw Data")
         ax_fit.plot(x_fit, y_fit, 'r-', label="Gaussian Fit")
+        ax_fit.fill_between(x_fit, y_fit, alpha=0.3, color='red')
+        ax_fit.set_xlabel("m/z")
+        ax_fit.set_ylabel("Intensity")
+        ax_fit.set_title(f"Gaussian Fit for Peak at m/z = {peak_mz:.1f}")
         ax_fit.legend()
         st.pyplot(fig_fit)
+  
     except:
         st.warning(f"Gaussian fit failed for peak at m/z = {peak_mz:.1f}")
