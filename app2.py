@@ -38,14 +38,14 @@ processor = load_processor()
 def load_models():
     try:
         # Try to load the models if they exist
-        if os.path.exists('models/fed_nsmote_lgbm.pkl'):
-            with open('models/fed_nsmote_lgbm.pkl', 'rb') as f:
+        if os.path.exists('fed_nsmote_lgbm.pkl'):
+            with open('fed_nsmote_lgbm.pkl', 'rb') as f:
                 model = pickle.load(f)
         else:
             model = None
             
-        if os.path.exists('models/fed_nsmote_scaler.pkl'):
-            with open('models/fed_nsmote_scaler.pkl', 'rb') as f:
+        if os.path.exists('fed_nsmote_scaler.pkl'):
+            with open('fed_nsmote_scaler.pkl', 'rb') as f:
                 scaler = pickle.load(f)
         else:
             scaler = None
