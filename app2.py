@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-import pickle
+import joblib
 import os
 import io
 import zipfile
@@ -37,23 +37,20 @@ processor = load_processor()
 @st.cache_resource
 def load_models():
     try:
-        # Try to load the models if they exist
+        model, scaler = None, None
+
         if os.path.exists('fed_nsmote_lgbm.pkl'):
-            with open('fed_nsmote_lgbm.pkl', 'rb') as f:
-                model = pickle.load(f)
-        else:
-            model = None
-            
+            model = joblib.load('fed_nsmote_lgbm.pkl')  # use joblib for loading joblib-saved models
+
         if os.path.exists('fed_nsmote_scaler.pkl'):
-            with open('fed_nsmote_scaler.pkl', 'rb') as f:
-                scaler = pickle.load(f)
-        else:
-            scaler = None
-            
+            scaler = joblib.load('fed_nsmote_scaler.pkl')  # same here
+
         return model, scaler
+
     except Exception as e:
         st.error(f"Error loading models: {str(e)}")
         return None, None
+
 
 model, scaler = load_models()
 
