@@ -550,8 +550,8 @@ elif process_button or st.session_state.processed_data is not None:
                 st.warning("⚠️ Prediction models are not available. Please ensure the model files are present in the 'models' directory.")
                 st.markdown("""
                 **Required model files:**
-                - `models/fed_nsmote_lgbm.pkl` - Trained LightGBM model
-                - `models/fed_nsmote_scaler.pkl` - Feature scaler
+                - `fed_nsmote_lgbm.pkl` - Trained LightGBM model
+                - `fed_nsmote_scaler.pkl` - Feature scaler
                 """)
         
         with tab5:
